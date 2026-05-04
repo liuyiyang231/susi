@@ -9,22 +9,42 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install dependencies
+      - name: Install System Dependencies
         run: |
           sudo apt update
           sudo apt install -y python3-pip openjdk-17-jdk
           pip install buildozer cython
-      - name: Accept Android SDK Licenses
+      - name: First build to download SDK (ignore failure)
+        run: buildozer android debug || true
+      - name: Force Accept SDK Licenses via Script
         run: |
-          mkdir -p $HOME/.android
-          touch $HOME/.android/repositories.cfg
-      - name: Patch Buildozer
-        run: |
-          FILE=$(python -c "import buildozer.targets.android; print(buildozer.targets.android.__file__)")
-          sed -i 's/build-tools;37.0.0/build-tools;34.0.0/g' "$FILE"
+          python -c "
+import os, subprocess, glob
+# 找到所有可能存在的 sdkmanager 路径
+manager_paths = glob.glob(os.path.expanduser('~/.buildozer/android/platform/android-sdk/**/sdkmanager'), recursive=True)
+if not manager_paths:
+    print('sdkmanager not found, trying to install cmdline-tools')
+    # 如果找不到，装一个新的 cmdline-tools
+    sdk_root = os.path.expanduser('~/.buildozer/android/platform/android-sdk')
+    os.makedirs(sdk_root + '/cmdline-tools', exist_ok=True)
+    subprocess.run(['wget', '-q', 'https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip', '-O', sdk_root+'/cmdline-tools/cmdline.zip'])
+    subprocess.run(['unzip', '-q', sdk_root+'/cmdline-tools/cmdline.zip', '-d', sdk_root+'/cmdline-tools/'])
+    manager_paths = glob.glob(sdk_root + '/cmdline-tools/**/sdkmanager', recursive=True)
+    
+# 强制同意所有许可证
+if manager_paths:
+    sdkmanager = manager_paths[0]
+    print(f'Using sdkmanager: {sdkmanager}')
+    # 卡住 build-tools 的许可证，直接接受
+    for lic in ['android-sdk-license', 'android-sdk-preview-license', 'intel-android-extra-license']:
+        print(f'Accepting {lic}')
+        subprocess.run(f'echo -e \"y\n\" | {sdkmanager} --sdk_root={os.path.expanduser(\"~/.buildozer/android/platform/android-sdk\")} --licenses', shell=True)
+else:
+    print('Failed to find any sdkmanager')
+"
+          echo "Licenses accepted"
       - name: Build APK
-        run: |
-          buildozer android debug
+        run: buildozer android debug
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
