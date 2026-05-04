@@ -14,13 +14,10 @@ jobs:
           sudo apt update
           sudo apt install -y python3-pip openjdk-17-jdk
           pip install buildozer cython
-      - name: First build to download SDK
-        run: buildozer android debug || true
-      - name: Force accept SDK licenses
+      - name: Accept Android SDK Licenses
         run: |
-          SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-          $SDK_ROOT/tools/bin/sdkmanager --sdk_root=$SDK_ROOT --update > /dev/null 2>&1 || true
-          yes | $SDK_ROOT/tools/bin/sdkmanager --sdk_root=$SDK_ROOT --licenses > /dev/null 2>&1 || true
+          mkdir -p $HOME/.android
+          touch $HOME/.android/repositories.cfg
       - name: Build APK
         run: buildozer android debug
       - name: Upload APK
