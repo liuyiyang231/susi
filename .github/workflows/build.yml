@@ -9,19 +9,22 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install System Dependencies
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y python3-pip openjdk-17-jdk
           pip install buildozer cython
-      - name: Force Patch Buildozer to use build-tools 34
+      - name: Force Patch Buildozer Source Code
         run: |
-          # 找到 buildozer 的安卓脚本，强制把 37.0.0 替换为 34.0.0
-          FILE=$(python -c "import buildozer.targets.android; print(buildozer.targets.android.__file__)")
-          echo "Patching file: $FILE"
-          sudo sed -i "s/'build-tools;37.0.0'/'build-tools;34.0.0'/g" $FILE
-          sudo sed -i "s/\"build-tools;37.0.0\"/\"build-tools;34.0.0\"/g" $FILE
-          grep "build-tools" $FILE
+          TARGET_FILE=$(python -c "import buildozer.targets.android as m; print(m.__file__)")
+          echo "Patching file: $TARGET_FILE"
+          sudo sed -i "s/'build-tools;37.0.0'/'build-tools;34.0.0'/g" "$TARGET_FILE"
+          echo "Patched content:"
+          grep "build-tools" "$TARGET_FILE"
+      - name: Accept Licenses
+        run: |
+          mkdir -p $HOME/.android
+          touch $HOME/.android/repositories.cfg
       - name: Build APK
         run: buildozer android debug
       - name: Upload APK
