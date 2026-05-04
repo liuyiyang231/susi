@@ -14,15 +14,19 @@ jobs:
           sudo apt update
           sudo apt install -y python3-pip openjdk-17-jdk autoconf libtool
           pip install buildozer cython
-      - name: First build (downloads SDK)
+      - name: Accept all SDK licenses beforehand
         run: |
-          buildozer android debug || true
-      - name: Accept Android SDK Licenses
-        run: |
-          yes | $HOME/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses || true
-          yes | $HOME/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          mkdir -p $HOME/.android
+          touch $HOME/.android/repositories.cfg
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          cd $HOME/android-sdk/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+          unzip -q commandlinetools-linux-9477386_latest.zip
+          mv cmdline-tools latest
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
       - name: Build APK
         run: |
+          export ANDROID_SDK_ROOT=$HOME/android-sdk
           buildozer android debug
       - name: Upload APK
         uses: actions/upload-artifact@v4
