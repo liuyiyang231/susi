@@ -18,6 +18,19 @@ jobs:
         run: |
           mkdir -p $HOME/.android
           touch $HOME/.android/repositories.cfg
+      - name: Patch Buildozer to use older build-tools
+        run: |
+          python -c "
+import buildozer.targets.android as android
+import inspect
+src = inspect.getsource(android)
+src = src.replace('build-tools;37.0.0', 'build-tools;34.0.0')
+src = src.replace('\"build-tools;37.0.0\"', '\"build-tools;34.0.0\"')
+exec(src, android.__dict__)
+" || true
+          # 更直接的方法：找到文件并替换
+          FILE=$(python -c "import buildozer.targets.android; print(buildozer.targets.android.__file__)")
+          sed -i 's/build-tools;37.0.0/build-tools;34.0.0/g' "$FILE"
       - name: Build APK
         run: |
           buildozer android debug
