@@ -4,17 +4,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install System Dependencies
+      - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y python3-pip openjdk-17-jdk autoconf libtool
+          sudo apt install -y python3-pip openjdk-17-jdk
           pip install buildozer cython
-      - name: Accept all SDK licenses beforehand
+      - name: Setup Android SDK
         run: |
           mkdir -p $HOME/.android
           touch $HOME/.android/repositories.cfg
@@ -23,10 +23,12 @@ jobs:
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
           unzip -q commandlinetools-linux-9477386_latest.zip
           mv cmdline-tools latest
-          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk --licenses
+          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "platforms;android-30" "build-tools;30.0.3"
+          echo "sdk.dir = $HOME/android-sdk" > $HOME/.android/local.properties
       - name: Build APK
         run: |
           export ANDROID_SDK_ROOT=$HOME/android-sdk
+          echo "sdk.dir = $HOME/android-sdk" > local.properties
           buildozer android debug
       - name: Upload APK
         uses: actions/upload-artifact@v4
